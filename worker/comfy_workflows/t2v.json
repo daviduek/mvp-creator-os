@@ -1,0 +1,28 @@
+{
+  "_comment": "Template para HunyuanVideo T2V con LoRA. Exportar de ComfyUI real una vez instalado y reemplazar.",
+  "1": { "class_type": "CheckpointLoaderSimple", "inputs": { "ckpt_name": "hunyuan_video.safetensors" } },
+  "10": {
+    "class_type": "LoraLoader",
+    "inputs": {
+      "lora_name": "sashavan.safetensors",
+      "strength_model": 0.8, "strength_clip": 0.8,
+      "model": ["1", 0], "clip": ["1", 1]
+    }
+  },
+  "6": { "class_type": "CLIPTextEncode", "inputs": { "text": "", "clip": ["10", 1] } },
+  "7": { "class_type": "CLIPTextEncode", "inputs": { "text": "static, blurry, deformed", "clip": ["10", 1] } },
+  "8": { "class_type": "EmptyLatentVideo", "inputs": { "width": 768, "height": 1344, "length": 80, "batch_size": 1 } },
+  "3": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": -1, "steps": 30, "cfg": 7,
+      "sampler_name": "euler", "scheduler": "normal", "denoise": 1.0,
+      "model": ["10", 0], "positive": ["6", 0], "negative": ["7", 0], "latent_image": ["8", 0]
+    }
+  },
+  "11": { "class_type": "VAEDecode", "inputs": { "samples": ["3", 0], "vae": ["1", 2] } },
+  "12": {
+    "class_type": "VHS_VideoCombine",
+    "inputs": { "images": ["11", 0], "frame_rate": 16, "filename_prefix": "sasha_t2v", "format": "video/h264-mp4" }
+  }
+}

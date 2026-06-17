@@ -1,0 +1,22 @@
+{
+  "_comment": "Template para Wan2.1 Image-to-Video. Exportar de ComfyUI real una vez instalado wan2.1 y reemplazar.",
+  "1": { "class_type": "LoadImage", "inputs": { "image": "input.png" } },
+  "2": { "class_type": "ImageScale", "inputs": { "image": ["1", 0], "width": 854, "height": 480, "upscale_method": "lanczos", "crop": "center" } },
+  "8": { "class_type": "EmptyLatentVideo", "inputs": { "width": 854, "height": 480, "length": 80, "batch_size": 1 } },
+  "6": { "class_type": "CLIPTextEncode", "inputs": { "text": "gentle natural motion", "clip": ["4", 1] } },
+  "7": { "class_type": "CLIPTextEncode", "inputs": { "text": "static, blurry", "clip": ["4", 1] } },
+  "4": { "class_type": "CheckpointLoaderSimple", "inputs": { "ckpt_name": "wan2.1_i2v.safetensors" } },
+  "3": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": -1, "steps": 25, "cfg": 6,
+      "sampler_name": "euler", "scheduler": "normal", "denoise": 1.0,
+      "model": ["4", 0], "positive": ["6", 0], "negative": ["7", 0], "latent_image": ["8", 0]
+    }
+  },
+  "11": { "class_type": "VAEDecode", "inputs": { "samples": ["3", 0], "vae": ["4", 2] } },
+  "12": {
+    "class_type": "VHS_VideoCombine",
+    "inputs": { "images": ["11", 0], "frame_rate": 16, "filename_prefix": "sasha_i2v", "format": "video/h264-mp4" }
+  }
+}

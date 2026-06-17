@@ -1,0 +1,27 @@
+{
+  "_comment": "Template para MimicMotion. Reemplazar exportando de ComfyUI con MimicMotionWrapper.",
+  "1": { "class_type": "LoadImage", "inputs": { "image": "sasha.png" } },
+  "2": {
+    "class_type": "VHS_LoadVideo",
+    "inputs": { "video": "motion_ref.mp4", "force_rate": 16, "frame_load_cap": 160, "skip_first_frames": 0 }
+  },
+  "30": {
+    "class_type": "DWPreprocessor",
+    "inputs": { "image": ["2", 0], "detect_hand": "enable", "detect_body": "enable", "detect_face": "enable", "resolution": 768 }
+  },
+  "40": { "class_type": "MimicMotionModelLoader", "inputs": { "model": "MimicMotion-1.1.safetensors" } },
+  "3": {
+    "class_type": "MimicMotionSampler",
+    "inputs": {
+      "mimic_motion_model": ["40", 0],
+      "reference_image": ["1", 0],
+      "pose_images": ["30", 0],
+      "steps": 25, "cfg_min": 2.0, "cfg_max": 4.5,
+      "seed": -1, "fps": 16, "noise_aug_strength": 0.0
+    }
+  },
+  "12": {
+    "class_type": "VHS_VideoCombine",
+    "inputs": { "images": ["3", 0], "frame_rate": 16, "filename_prefix": "sasha_motion", "format": "video/h264-mp4" }
+  }
+}

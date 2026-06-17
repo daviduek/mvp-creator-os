@@ -1,0 +1,13 @@
+node_modules
+.next
+out
+build
+.env
+.env.local
+.env*.local
+.vercel
+*.log
+.DS_Store
+
+# Local-only helpers (contienen secretos hardcodeados)
+scripts/
