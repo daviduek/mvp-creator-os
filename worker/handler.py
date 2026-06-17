@@ -1,7 +1,14 @@
 """RunPod Serverless handler — orchestrates ComfyUI generations."""
 import os
+import sys
 import time
 import traceback
+
+# Force unbuffered stdout so logs appear in RunPod dashboard immediately
+sys.stdout.reconfigure(line_buffering=True)
+sys.stderr.reconfigure(line_buffering=True)
+print("[handler] Module loading...", flush=True)
+
 import runpod
 
 from comfy_client import ComfyClient
@@ -12,6 +19,7 @@ from workflow_builders import build_workflow
 COMFY_URL = os.environ.get("COMFY_URL", "http://127.0.0.1:8188")
 LORA_URL = os.environ.get("SASHA_LORA_URL", "")
 LORA_LOCAL_NAME = "sashavan.safetensors"
+print(f"[handler] Config: COMFY_URL={COMFY_URL} | LORA_URL_set={bool(LORA_URL)}", flush=True)
 
 
 def ensure_lora_present(comfy: ComfyClient):
@@ -33,7 +41,9 @@ def handler(event):
             return {"error": f"Tipo de workflow inválido: {wf_type}"}
 
         comfy = ComfyClient(COMFY_URL)
-        comfy.wait_until_ready(timeout=120)
+        print(f"[handler] Waiting for ComfyUI at {COMFY_URL}...", flush=True)
+        comfy.wait_until_ready(timeout=300)
+        print("[handler] ComfyUI ready.", flush=True)
         ensure_lora_present(comfy)
 
         if wf_type == "motion" and wf.get("motion_source", {}).get("type") == "tiktok":
@@ -68,4 +78,5 @@ def handler(event):
         return {"error": f"{type(e).__name__}: {e}"}
 
 
+print("[handler] Registering with RunPod serverless...", flush=True)
 runpod.serverless.start({"handler": handler})
