@@ -11,3 +11,5 @@ build
 
 # Local-only helpers (contienen secretos hardcodeados)
 scripts/
+
+.vercel
