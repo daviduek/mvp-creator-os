@@ -1,35 +1,58 @@
-"""RunPod Serverless handler — orchestrates ComfyUI generations."""
-import os
+"""RunPod Serverless handler — orchestrates ComfyUI generations.
+
+Heavy diagnostics version: every import + bootstrap step is logged eagerly
+and any failure prints a full traceback to stdout and stderr before exiting.
+"""
 import sys
-import time
-import traceback
 
-# Force unbuffered stdout so logs appear in RunPod dashboard immediately
-sys.stdout.reconfigure(line_buffering=True)
-sys.stderr.reconfigure(line_buffering=True)
-print("[handler] Module loading...", flush=True)
+# Aggressive output: write to both stdout and stderr so RunPod definitely captures it.
+def _log(msg: str):
+    print(f"[handler] {msg}", flush=True)
+    print(f"[handler] {msg}", file=sys.stderr, flush=True)
 
-import runpod
 
-from comfy_client import ComfyClient
-from r2_uploader import upload_bytes
-from tiktok_downloader import download_video
-from workflow_builders import build_workflow
+_log("=== handler.py START ===")
+_log(f"sys.version = {sys.version}")
+_log(f"sys.path[:3] = {sys.path[:3]}")
+
+try:
+    import os
+    import time
+    import traceback
+    _log("stdlib imports OK")
+
+    _log("Importing runpod...")
+    import runpod
+    _log(f"runpod imported, version = {getattr(runpod, '__version__', 'unknown')}")
+
+    _log("Importing local modules: comfy_client, r2_uploader, tiktok_downloader, workflow_builders...")
+    from comfy_client import ComfyClient
+    from r2_uploader import upload_bytes
+    from tiktok_downloader import download_video
+    from workflow_builders import build_workflow
+    _log("All local imports OK")
+
+except Exception as e:
+    print(f"[handler] FATAL IMPORT ERROR: {type(e).__name__}: {e}", flush=True)
+    print(f"[handler] FATAL IMPORT ERROR: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
+    traceback.print_exc()
+    sys.exit(1)
+
 
 COMFY_URL = os.environ.get("COMFY_URL", "http://127.0.0.1:8188")
 LORA_URL = os.environ.get("SASHA_LORA_URL", "")
 LORA_LOCAL_NAME = "sashavan.safetensors"
-print(f"[handler] Config: COMFY_URL={COMFY_URL} | LORA_URL_set={bool(LORA_URL)}", flush=True)
+_log(f"Config: COMFY_URL={COMFY_URL} | LORA_URL_set={bool(LORA_URL)}")
 
 
 def ensure_lora_present(comfy: ComfyClient):
-    """Ensure the Sasha LoRA is loaded into ComfyUI's loras/ folder."""
     if not LORA_URL:
         raise RuntimeError("SASHA_LORA_URL no configurado")
     comfy.download_model(LORA_URL, "loras", LORA_LOCAL_NAME)
 
 
 def handler(event):
+    _log(f"=== JOB RECEIVED: {event.get('id', '?')} ===")
     try:
         job_input = event.get("input", {})
         wf = job_input.get("workflow")
@@ -41,10 +64,11 @@ def handler(event):
             return {"error": f"Tipo de workflow inválido: {wf_type}"}
 
         comfy = ComfyClient(COMFY_URL)
-        print(f"[handler] Waiting for ComfyUI at {COMFY_URL}...", flush=True)
+        _log(f"Waiting for ComfyUI at {COMFY_URL}...")
         comfy.wait_until_ready(timeout=300)
-        print("[handler] ComfyUI ready.", flush=True)
+        _log("ComfyUI ready.")
         ensure_lora_present(comfy)
+        _log("LoRA ensured.")
 
         if wf_type == "motion" and wf.get("motion_source", {}).get("type") == "tiktok":
             tt_url = wf["motion_source"]["url"]
@@ -52,8 +76,10 @@ def handler(event):
             wf["motion_source"] = {"type": "local", "path": local_path}
 
         graph = build_workflow(wf, lora_name=LORA_LOCAL_NAME)
+        _log(f"Submitting graph (type={wf_type})...")
 
         prompt_id = comfy.submit(graph)
+        _log(f"prompt_id={prompt_id}, waiting for outputs...")
         outputs = comfy.wait_for_outputs(prompt_id, timeout=600)
 
         if not outputs:
@@ -70,13 +96,21 @@ def handler(event):
             content_type = "video/mp4" if is_video else "image/png"
             public_url = upload_bytes(key, data, content_type)
             result_files.append(public_url)
+            _log(f"Uploaded {filename} → {public_url}")
 
         return {"url": result_files[0], "all": result_files}
 
     except Exception as e:
-        traceback.print_exc()
-        return {"error": f"{type(e).__name__}: {e}"}
+        tb = traceback.format_exc()
+        _log(f"HANDLER ERROR: {type(e).__name__}: {e}")
+        _log(tb)
+        return {"error": f"{type(e).__name__}: {e}", "traceback": tb}
 
 
-print("[handler] Registering with RunPod serverless...", flush=True)
-runpod.serverless.start({"handler": handler})
+_log("Calling runpod.serverless.start({handler})...")
+try:
+    runpod.serverless.start({"handler": handler})
+except Exception as e:
+    _log(f"FATAL: runpod.serverless.start raised: {type(e).__name__}: {e}")
+    traceback.print_exc()
+    sys.exit(1)
