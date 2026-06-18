@@ -12,4 +12,9 @@ build
 # Local-only helpers (contienen secretos hardcodeados)
 scripts/
 
+# Local test artifacts
+.env.prod.check
+test_output_*.png
+final_e2e_test.png
+
 .vercel
