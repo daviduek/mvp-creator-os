@@ -10,12 +10,14 @@ RUN mkdir -p /comfyui/models/loras \
 
 # Lustify SDXL NSFW APEX V8 — SDXL fine-tune, photorealistic by default, no safety bias.
 # Token mounted as a BuildKit secret so it never lands in the final image layer.
+# IMPORTANT: CivitAI redirects to Cloudflare R2 signed URLs and drops Authorization
+# headers across the redirect — we have to put the token in the query string.
 RUN --mount=type=secret,id=civitai_token \
     mkdir -p /comfyui/models/checkpoints \
- && TOKEN=$(cat /run/secrets/civitai_token) \
- && wget -q --header="Authorization: Bearer ${TOKEN}" \
-    -O /comfyui/models/checkpoints/lustifySDXL.safetensors \
-    "https://civitai.com/api/download/models/2808677" \
+ && TOKEN="$(cat /run/secrets/civitai_token)" \
+ && curl -sL --fail --retry 3 --retry-delay 5 \
+    -o /comfyui/models/checkpoints/lustifySDXL.safetensors \
+    "https://civitai.com/api/download/models/2808677?token=${TOKEN}" \
  && ls -lh /comfyui/models/checkpoints/lustifySDXL.safetensors
 
 # SDXL VAE fp16 fix (~330MB) for clean outputs
