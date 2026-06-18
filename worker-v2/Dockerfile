@@ -8,19 +8,17 @@ RUN mkdir -p /comfyui/models/loras \
     "https://pub-59a7dc0002a9480faf4f6cb09c2bfd5e.r2.dev/loras/sashavan.safetensors" \
  && ls -lh /comfyui/models/loras/sashavan.safetensors
 
-# SDXL base checkpoint (~6.5GB)
+# Pony Diffusion V6 XL — SDXL fine-tune trained without the SDXL safety bias.
+# AstraliteHeart's original repo. ~6.9GB.
 RUN mkdir -p /comfyui/models/checkpoints \
- && wget -q -O /comfyui/models/checkpoints/sd_xl_base_1.0.safetensors \
-    "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors" \
- && ls -lh /comfyui/models/checkpoints/sd_xl_base_1.0.safetensors
+ && wget -q -O /comfyui/models/checkpoints/ponyDiffusionV6XL.safetensors \
+    "https://huggingface.co/AstraliteHeart/pony-diffusion-v6/resolve/main/v6.safetensors" \
+ && ls -lh /comfyui/models/checkpoints/ponyDiffusionV6XL.safetensors
 
-# SDXL VAE fp16 fix (~330MB) for cleaner outputs
+# SDXL VAE fp16 fix (~330MB) for clean outputs across all SDXL-based models
 RUN mkdir -p /comfyui/models/vae \
  && wget -q -O /comfyui/models/vae/sdxl_vae.safetensors \
     "https://huggingface.co/madebyollin/sdxl-vae-fp16-fix/resolve/main/sdxl_vae.safetensors" \
  && ls -lh /comfyui/models/vae/sdxl_vae.safetensors
-
-# ControlNet OpenPose is large (~2.5GB) and only needed for Pose mode.
-# Skip baking it; the Pose route will lazy-download it on first use.
 
 # Inherit CMD/ENTRYPOINT from base — no overrides.
