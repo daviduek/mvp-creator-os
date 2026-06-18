@@ -6,18 +6,17 @@
 
 const TRIGGER = 'sashavan';
 const LORA_NAME = 'sashavan.safetensors';
-const SDXL_BASE = 'ponyDiffusionV6XL.safetensors';
+const SDXL_BASE = 'lustifySDXL.safetensors';
 
-// Pony XL responds best to its own tag-based prompt format.
-// Score boosters drive quality up; source_photo nudges toward photorealism (Pony was trained on multi-style data).
-const PONY_QUALITY_TAGS = 'score_9, score_8_up, score_7_up, source_photo, photorealistic, realistic photo';
-const PONY_NEGATIVE = 'score_4, score_5, score_6, anime, cartoon, drawing, painting, illustration, sketch, 3d render, low quality, blurry, deformed, bad anatomy, extra limbs, watermark, logo';
+// Lustify XL is photorealistic by default; we still nudge with quality tags.
+const SDXL_QUALITY_TAGS = 'photorealistic, raw photo, sharp focus, dslr photo, professional photography';
+const SDXL_NEGATIVE = 'lowres, blurry, deformed, bad anatomy, extra limbs, extra fingers, missing fingers, watermark, logo, text, signature, cartoon, illustration, drawing, painting, anime, 3d render, plastic skin';
 
 function ensureTrigger(prompt: string): string {
   const hasTrigger = prompt.toLowerCase().includes(TRIGGER);
-  const hasPonyTags = /score_\d/.test(prompt);
+  const hasQualityTags = /photorealistic|raw photo|dslr/i.test(prompt);
   const base = hasTrigger ? prompt : `${TRIGGER}, ${prompt}`;
-  return hasPonyTags ? base : `${PONY_QUALITY_TAGS}, ${base}`;
+  return hasQualityTags ? base : `${base}, ${SDXL_QUALITY_TAGS}`;
 }
 
 function aspectToWH(ratio: string): [number, number] {
@@ -67,7 +66,7 @@ export function buildT2IGraph(opts: {
     '7': {
       class_type: 'CLIPTextEncode',
       inputs: {
-        text: PONY_NEGATIVE,
+        text: SDXL_NEGATIVE,
         clip: ['10', 1],
       },
     },
@@ -127,7 +126,7 @@ export function buildPoseGraph(opts: {
     },
     '23': { class_type: 'ControlNetLoader', inputs: { control_net_name: 'controlnet-openpose-sdxl.safetensors' } },
     '6': { class_type: 'CLIPTextEncode', inputs: { text: prompt, clip: ['10', 1] } },
-    '7': { class_type: 'CLIPTextEncode', inputs: { text: PONY_NEGATIVE, clip: ['10', 1] } },
+    '7': { class_type: 'CLIPTextEncode', inputs: { text: SDXL_NEGATIVE, clip: ['10', 1] } },
     '22': {
       class_type: 'ControlNetApply',
       inputs: { strength: 0.9, conditioning: ['6', 0], control_net: ['23', 0], image: ['21', 0] },
