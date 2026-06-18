@@ -5,18 +5,19 @@
  */
 
 const TRIGGER = 'sashavan';
-const LORA_NAME = 'sashavan.safetensors';
-const SDXL_BASE = 'lustifySDXL.safetensors';
+const LORA_NAME = 'sashavan_pony.safetensors';
+const SDXL_BASE = 'cyberrealisticPony.safetensors';
 
-// Lustify XL is photorealistic by default; we still nudge with quality tags.
-const SDXL_QUALITY_TAGS = 'photorealistic, raw photo, sharp focus, dslr photo, professional photography';
-const SDXL_NEGATIVE = 'lowres, blurry, deformed, bad anatomy, extra limbs, extra fingers, missing fingers, watermark, logo, text, signature, cartoon, illustration, drawing, painting, anime, 3d render, plastic skin';
+// CyberRealistic Pony is Pony family → uses Pony's tag format.
+// Score boosters drive quality; source_photo + photorealistic nudge away from stylization.
+const PONY_QUALITY_TAGS = 'score_9, score_8_up, score_7_up, source_photo, photorealistic, raw photo, dslr photo';
+const SDXL_NEGATIVE = 'score_4, score_5, score_6, anime, cartoon, drawing, painting, illustration, sketch, 3d render, low quality, blurry, deformed, bad anatomy, extra limbs, extra fingers, watermark, logo, text, plastic skin';
 
 function ensureTrigger(prompt: string): string {
   const hasTrigger = prompt.toLowerCase().includes(TRIGGER);
-  const hasQualityTags = /photorealistic|raw photo|dslr/i.test(prompt);
+  const hasPonyTags = /score_\d/.test(prompt);
   const base = hasTrigger ? prompt : `${TRIGGER}, ${prompt}`;
-  return hasQualityTags ? base : `${base}, ${SDXL_QUALITY_TAGS}`;
+  return hasPonyTags ? base : `${PONY_QUALITY_TAGS}, ${base}`;
 }
 
 function aspectToWH(ratio: string): [number, number] {
