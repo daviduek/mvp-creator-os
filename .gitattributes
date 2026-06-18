@@ -1,0 +1,4 @@
+# Force LF line endings on shell scripts (Windows CRLF breaks /bin/bash in Linux containers)
+*.sh text eol=lf
+*.py text eol=lf
+Dockerfile text eol=lf

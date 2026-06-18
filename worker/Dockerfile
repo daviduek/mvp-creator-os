@@ -5,7 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PIP_NO_CACHE_DIR=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3.10 python3-pip python3-venv git wget curl ffmpeg \
+    python3.10 python3-pip python3-venv git wget curl ffmpeg dos2unix \
     && rm -rf /var/lib/apt/lists/*
 
 RUN ln -sf /usr/bin/python3.10 /usr/bin/python
@@ -33,11 +33,11 @@ RUN pip install -r requirements.txt
 
 COPY *.py ./
 COPY comfy_workflows ./comfy_workflows
-COPY start.sh /start.sh
-RUN chmod +x /start.sh
-
 ENV COMFY_URL=http://127.0.0.1:8188 \
     COMFY_MODELS_DIR=/workspace/ComfyUI/models \
-    COMFY_INPUT_DIR=/workspace/ComfyUI/input
+    COMFY_INPUT_DIR=/workspace/ComfyUI/input \
+    PYTHONUNBUFFERED=1
 
-CMD ["/start.sh"]
+# CMD direct to python — no shell script wrapper
+WORKDIR /worker
+CMD ["python", "-u", "handler.py"]

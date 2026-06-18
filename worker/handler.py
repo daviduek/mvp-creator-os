@@ -1,48 +1,80 @@
 """RunPod Serverless handler — orchestrates ComfyUI generations.
 
-Heavy diagnostics version: every import + bootstrap step is logged eagerly
-and any failure prints a full traceback to stdout and stderr before exiting.
+Launches ComfyUI as a subprocess directly from Python (no shell script).
+Heavy diagnostics: prints land in stdout and stderr from the very first line.
 """
+import os
 import sys
+import subprocess
+import threading
+import time
+import traceback
 
-# Aggressive output: write to both stdout and stderr so RunPod definitely captures it.
+# Force unbuffered output at the C runtime level
+os.environ.setdefault("PYTHONUNBUFFERED", "1")
+
+
 def _log(msg: str):
-    print(f"[handler] {msg}", flush=True)
-    print(f"[handler] {msg}", file=sys.stderr, flush=True)
+    line = f"[handler] {msg}"
+    print(line, flush=True)
+    print(line, file=sys.stderr, flush=True)
 
 
 _log("=== handler.py START ===")
-_log(f"sys.version = {sys.version}")
-_log(f"sys.path[:3] = {sys.path[:3]}")
+_log(f"sys.version = {sys.version.split()[0]}")
+_log(f"cwd = {os.getcwd()}")
+_log(f"PID = {os.getpid()}")
 
 try:
-    import os
-    import time
-    import traceback
-    _log("stdlib imports OK")
-
-    _log("Importing runpod...")
     import runpod
     _log(f"runpod imported, version = {getattr(runpod, '__version__', 'unknown')}")
 
-    _log("Importing local modules: comfy_client, r2_uploader, tiktok_downloader, workflow_builders...")
     from comfy_client import ComfyClient
     from r2_uploader import upload_bytes
     from tiktok_downloader import download_video
     from workflow_builders import build_workflow
     _log("All local imports OK")
-
 except Exception as e:
-    print(f"[handler] FATAL IMPORT ERROR: {type(e).__name__}: {e}", flush=True)
-    print(f"[handler] FATAL IMPORT ERROR: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
-    traceback.print_exc()
+    _log(f"FATAL IMPORT ERROR: {type(e).__name__}: {e}")
+    traceback.print_exc(file=sys.stdout)
+    traceback.print_exc(file=sys.stderr)
     sys.exit(1)
 
 
 COMFY_URL = os.environ.get("COMFY_URL", "http://127.0.0.1:8188")
 LORA_URL = os.environ.get("SASHA_LORA_URL", "")
 LORA_LOCAL_NAME = "sashavan.safetensors"
-_log(f"Config: COMFY_URL={COMFY_URL} | LORA_URL_set={bool(LORA_URL)}")
+COMFY_DIR = "/workspace/ComfyUI"
+_log(f"Config: COMFY_URL={COMFY_URL} | LORA_URL_set={bool(LORA_URL)} | COMFY_DIR={COMFY_DIR}")
+
+
+def _stream_comfy_output(proc: subprocess.Popen):
+    """Pipe ComfyUI's stdout into our logs in real time."""
+    if not proc.stdout:
+        return
+    for line in proc.stdout:
+        sys.stdout.write(f"[comfy] {line}")
+        sys.stdout.flush()
+
+
+def launch_comfyui_background():
+    """Start ComfyUI in a background subprocess."""
+    if not os.path.isdir(COMFY_DIR):
+        _log(f"WARNING: {COMFY_DIR} does not exist; ComfyUI cannot launch")
+        return None
+    _log("Launching ComfyUI subprocess...")
+    proc = subprocess.Popen(
+        ["python", "-u", "main.py", "--listen", "127.0.0.1", "--port", "8188", "--disable-auto-launch"],
+        cwd=COMFY_DIR,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+    )
+    _log(f"ComfyUI PID = {proc.pid}")
+    t = threading.Thread(target=_stream_comfy_output, args=(proc,), daemon=True)
+    t.start()
+    return proc
 
 
 def ensure_lora_present(comfy: ComfyClient):
@@ -52,7 +84,7 @@ def ensure_lora_present(comfy: ComfyClient):
 
 
 def handler(event):
-    _log(f"=== JOB RECEIVED: {event.get('id', '?')} ===")
+    _log(f"=== JOB RECEIVED: id={event.get('id', '?')} ===")
     try:
         job_input = event.get("input", {})
         wf = job_input.get("workflow")
@@ -89,7 +121,6 @@ def handler(event):
         result_files = []
         for filename in outputs:
             data = comfy.fetch_output(filename)
-            ext = filename.split(".")[-1]
             folder = "outputs/video" if is_video else "outputs/image"
             ts = int(time.time() * 1000)
             key = f"{folder}/{ts}-{filename}"
@@ -107,10 +138,14 @@ def handler(event):
         return {"error": f"{type(e).__name__}: {e}", "traceback": tb}
 
 
+# Launch ComfyUI right before registering with RunPod
+_log("Starting ComfyUI subprocess BEFORE runpod.serverless.start()...")
+launch_comfyui_background()
+
 _log("Calling runpod.serverless.start({handler})...")
 try:
     runpod.serverless.start({"handler": handler})
 except Exception as e:
     _log(f"FATAL: runpod.serverless.start raised: {type(e).__name__}: {e}")
-    traceback.print_exc()
+    traceback.print_exc(file=sys.stdout)
     sys.exit(1)
