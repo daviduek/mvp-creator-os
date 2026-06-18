@@ -15,10 +15,11 @@ RUN mkdir -p /comfyui/models/loras \
 RUN --mount=type=secret,id=civitai_token \
     mkdir -p /comfyui/models/checkpoints \
  && TOKEN="$(cat /run/secrets/civitai_token)" \
- && curl -sL --fail --retry 3 --retry-delay 5 \
-    -o /comfyui/models/checkpoints/lustifySDXL.safetensors \
+ && wget --tries=3 --timeout=60 \
+    -O /comfyui/models/checkpoints/lustifySDXL.safetensors \
     "https://civitai.com/api/download/models/2808677?token=${TOKEN}" \
- && ls -lh /comfyui/models/checkpoints/lustifySDXL.safetensors
+ && ls -lh /comfyui/models/checkpoints/lustifySDXL.safetensors \
+ && test $(stat -c %s /comfyui/models/checkpoints/lustifySDXL.safetensors) -gt 5000000000
 
 # SDXL VAE fp16 fix (~330MB) for clean outputs
 RUN mkdir -p /comfyui/models/vae \
