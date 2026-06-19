@@ -59,7 +59,7 @@ RUN cd /comfyui/custom_nodes \
 # insightface compiles native code → need build tools first.
 # Pin Cython + numpy < 2 because newer numpy breaks insightface 0.7.3.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      build-essential g++ \
+      build-essential g++ python3-dev python3.12-dev \
  && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir "Cython>=0.29" "numpy<2" \
  && pip install --no-cache-dir \
