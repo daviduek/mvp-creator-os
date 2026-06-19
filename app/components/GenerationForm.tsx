@@ -28,8 +28,17 @@ export default function GenerationForm({ mode }: { mode: Tab }) {
 
   useEffect(() => () => gen.stop(), []); // cleanup on unmount
 
+  const [localError, setLocalError] = useState('');
+  const [uploading, setUploading] = useState(false);
+
   const submit = async () => {
-    if (needs.prompt && !prompt.trim()) { return; }
+    setLocalError('');
+    if (needs.prompt && !prompt.trim()) { setLocalError('Escribí un prompt.'); return; }
+    if (needs.image && !image) { setLocalError('Subí una imagen de Sasha.'); return; }
+    if (needs.poseImage && !poseImage) { setLocalError('Subí la foto de la pose.'); return; }
+    if (needs.refVideo && sourceMode === 'upload' && !refVideo) { setLocalError('Subí el video de referencia.'); return; }
+    if (needs.refVideo && sourceMode === 'link' && !tiktokUrl.trim()) { setLocalError('Pegá el link de TikTok.'); return; }
+
     const kind = route?.kind || 'image';
     const payload: Record<string, unknown> = { prompt };
     if (needs.aspect) payload.aspect_ratio = aspect;
@@ -37,20 +46,31 @@ export default function GenerationForm({ mode }: { mode: Tab }) {
     if (needs.loraWeight) payload.lora_weight = loraWeight;
 
     try {
+      setUploading(true);
       if (needs.image && image) {
-        payload.image_url = image.url || await uploadAsset(image.file);
+        const url = image.url || await uploadAsset(image.file);
+        setImage({ ...image, url });
+        payload.image_url = url;
       }
       if (needs.poseImage && poseImage) {
-        payload.image_url = poseImage.url || await uploadAsset(poseImage.file);
+        const url = poseImage.url || await uploadAsset(poseImage.file);
+        setPoseImage({ ...poseImage, url });
+        payload.image_url = url;
       }
       if (needs.refVideo) {
         if (sourceMode === 'link') payload.tiktok_url = tiktokUrl.trim();
-        else if (refVideo) payload.ref_video_url = refVideo.url || await uploadAsset(refVideo.file);
+        else if (refVideo) {
+          const url = refVideo.url || await uploadAsset(refVideo.file);
+          setRefVideo({ ...refVideo, url });
+          payload.ref_video_url = url;
+        }
       }
-    } catch {
-      // uploadAsset throws are surfaced by the generate error path; fall through
+    } catch (err: unknown) {
+      setUploading(false);
+      setLocalError(err instanceof Error ? err.message : 'Error subiendo el archivo');
+      return;
     }
-
+    setUploading(false);
     gen.generate(mode, content, kind, payload);
   };
 
@@ -145,15 +165,16 @@ export default function GenerationForm({ mode }: { mode: Tab }) {
           )}
         </div>
 
-        <button className="primary" onClick={submit} disabled={disabled}>
-          {gen.loading ? 'Generando...' : route?.enabled ? `Generar ${route.kind === 'video' ? 'video' : 'imagen'} →` : 'No disponible'}
+        {localError && <div className="error-box" style={{ marginBottom: 12 }}>{localError}</div>}
+        <button className="primary" onClick={submit} disabled={disabled || uploading}>
+          {uploading ? 'Subiendo...' : gen.loading ? 'Generando...' : route?.enabled ? `Generar ${route.kind === 'video' ? 'video' : 'imagen'} →` : 'No disponible'}
         </button>
       </div>
 
       {/* Result */}
       <div className="card">
         <label>Resultado</label>
-        {gen.loading && <div className="status"><div className="spinner" />{gen.statusMsg}</div>}
+        {(gen.loading || uploading) && <div className="status"><div className="spinner" />{uploading ? 'Subiendo archivo...' : gen.statusMsg}</div>}
         {gen.error && <div className="error-box">{gen.error}</div>}
         {gen.resultUrl ? (
           <div style={{ textAlign: 'center' }}>
