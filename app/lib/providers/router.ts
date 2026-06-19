@@ -47,15 +47,20 @@ function resolve(req: GenRequest): Resolved {
   return { provider: info.provider, model };
 }
 
-/** Encode an opaque, URL-safe job token. */
-function encodeToken(provider: ProviderName, model: string | undefined, id: string): string {
-  const json = JSON.stringify({ p: provider, m: model, id });
-  return Buffer.from(json, 'utf8').toString('base64url');
+interface TokenData {
+  p: ProviderName;
+  id?: string;        // runpod / replicate id
+  s?: string;         // fal status_url
+  r?: string;         // fal response_url
 }
 
-function decodeToken(token: string): { p: ProviderName; m?: string; id: string } {
-  const json = Buffer.from(token, 'base64url').toString('utf8');
-  return JSON.parse(json);
+/** Encode an opaque, URL-safe job token. */
+function encodeToken(data: TokenData): string {
+  return Buffer.from(JSON.stringify(data), 'utf8').toString('base64url');
+}
+
+function decodeToken(token: string): TokenData {
+  return JSON.parse(Buffer.from(token, 'base64url').toString('utf8'));
 }
 
 /** Submit a generation request. Returns a jobId to poll. */
@@ -65,15 +70,15 @@ export async function submit(req: GenRequest): Promise<SubmitResult> {
   if (provider === 'fal') {
     if (!model) throw new Error('Modelo fal no configurado');
     const input = buildFalInput(model, req);
-    const id = await falSubmit(model, input);
-    return { jobId: encodeToken('fal', model, id) };
+    const { statusUrl, responseUrl } = await falSubmit(model, input);
+    return { jobId: encodeToken({ p: 'fal', s: statusUrl, r: responseUrl }) };
   }
 
   if (provider === 'replicate') {
     if (!model) throw new Error('Modelo Replicate no configurado');
     const input = buildReplicateInput(model, req);
     const id = await replicateSubmit(model, input);
-    return { jobId: encodeToken('replicate', model, id) };
+    return { jobId: encodeToken({ p: 'replicate', id }) };
   }
 
   // runpod — self-hosted ComfyUI graphs
@@ -85,7 +90,7 @@ export async function submit(req: GenRequest): Promise<SubmitResult> {
       seed: req.seed,
     });
     const id = await runpodSubmit(graph);
-    return { jobId: encodeToken('runpod', undefined, id) };
+    return { jobId: encodeToken({ p: 'runpod', id }) };
   }
 
   if (req.mode === 'pose') {
@@ -101,7 +106,7 @@ export async function submit(req: GenRequest): Promise<SubmitResult> {
       lora_weight: req.lora_weight ?? 0.85,
     });
     const id = await runpodSubmit(graph, images);
-    return { jobId: encodeToken('runpod', undefined, id) };
+    return { jobId: encodeToken({ p: 'runpod', id }) };
   }
 
   throw new Error(`Modo ${req.mode} en infra propia todavía no implementado`);
@@ -115,8 +120,8 @@ export async function poll(token: string): Promise<PollResult> {
   } catch {
     return { status: 'failed', error: 'jobId inválido' };
   }
-  if (decoded.p === 'fal') return falPoll(decoded.m!, decoded.id);
-  if (decoded.p === 'replicate') return replicatePoll(decoded.id);
-  if (decoded.p === 'runpod') return runpodPoll(decoded.id);
+  if (decoded.p === 'fal') return falPoll(decoded.s!, decoded.r!);
+  if (decoded.p === 'replicate') return replicatePoll(decoded.id!);
+  if (decoded.p === 'runpod') return runpodPoll(decoded.id!);
   return { status: 'failed', error: 'Proveedor desconocido' };
 }

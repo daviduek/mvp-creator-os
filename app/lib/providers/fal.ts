@@ -17,8 +17,14 @@ function key(): string {
   return k;
 }
 
-/** Submit a job to fal. Returns the request_id (we also need the model to poll). */
-export async function falSubmit(model: string, input: Record<string, unknown>): Promise<string> {
+export interface FalSubmitResult {
+  requestId: string;
+  statusUrl: string;    // authoritative URLs returned by fal — robust for sub-pathed models
+  responseUrl: string;
+}
+
+/** Submit a job to fal. Returns fal's own status/response URLs (don't reconstruct them!). */
+export async function falSubmit(model: string, input: Record<string, unknown>): Promise<FalSubmitResult> {
   const res = await fetch(`${QUEUE_BASE}/${model}`, {
     method: 'POST',
     headers: { Authorization: `Key ${key()}`, 'Content-Type': 'application/json' },
@@ -29,14 +35,21 @@ export async function falSubmit(model: string, input: Record<string, unknown>): 
     throw new Error(data?.detail || data?.error || `fal error ${res.status}`);
   }
   if (!data.request_id) throw new Error('fal no devolvió request_id');
-  return data.request_id as string;
+
+  // fal returns the exact URLs to poll. The status URL for sub-pathed models
+  // (e.g. fal-ai/veo3/image-to-video) lives under the base app id, so we must
+  // use what fal hands back rather than building it ourselves.
+  const appBase = model.split('/').slice(0, 2).join('/'); // fal-ai/veo3
+  return {
+    requestId: data.request_id,
+    statusUrl: data.status_url || `${QUEUE_BASE}/${appBase}/requests/${data.request_id}/status`,
+    responseUrl: data.response_url || `${QUEUE_BASE}/${appBase}/requests/${data.request_id}`,
+  };
 }
 
-/** Poll a fal job by model + request_id. */
-export async function falPoll(model: string, requestId: string): Promise<PollResult> {
-  const statusRes = await fetch(`${QUEUE_BASE}/${model}/requests/${requestId}/status`, {
-    headers: { Authorization: `Key ${key()}` },
-  });
+/** Poll a fal job using fal's own status/response URLs. */
+export async function falPoll(statusUrl: string, responseUrl: string): Promise<PollResult> {
+  const statusRes = await fetch(statusUrl, { headers: { Authorization: `Key ${key()}` } });
   if (!statusRes.ok) {
     const t = await statusRes.text();
     return { status: 'failed', error: `fal status ${statusRes.status}: ${t.slice(0, 200)}` };
@@ -48,10 +61,7 @@ export async function falPoll(model: string, requestId: string): Promise<PollRes
   if (s === 'IN_PROGRESS') return { status: 'processing', progress: status.progress };
   if (s !== 'COMPLETED') return { status: 'processing' };
 
-  // Completed — fetch the actual result payload
-  const resultRes = await fetch(`${QUEUE_BASE}/${model}/requests/${requestId}`, {
-    headers: { Authorization: `Key ${key()}` },
-  });
+  const resultRes = await fetch(responseUrl, { headers: { Authorization: `Key ${key()}` } });
   const result = await resultRes.json();
   if (!resultRes.ok) {
     return { status: 'failed', error: result?.detail || `fal result ${resultRes.status}` };
