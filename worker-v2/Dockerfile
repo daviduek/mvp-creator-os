@@ -49,11 +49,13 @@ RUN mkdir -p /comfyui/models/ultralytics/bbox \
  && wget -q -O /comfyui/models/ultralytics/bbox/face_yolov8m.pt \
     "https://huggingface.co/Bingsu/adetailer/resolve/main/face_yolov8m.pt"
 
-# --- ComfyUI custom nodes: IP-Adapter Plus + Impact Pack ---
+# --- ComfyUI custom nodes: IP-Adapter Plus + Impact Pack + Impact Subpack ---
+# Impact Subpack provides UltralyticsDetectorProvider (the YOLO loader for FaceDetailer).
+# It must live as a SIBLING of Impact Pack under custom_nodes, not nested inside.
 RUN cd /comfyui/custom_nodes \
  && git clone --depth=1 https://github.com/cubiq/ComfyUI_IPAdapter_plus.git \
  && git clone --depth=1 https://github.com/ltdrdata/ComfyUI-Impact-Pack.git \
- && git clone --depth=1 https://github.com/ltdrdata/ComfyUI-Impact-Subpack.git ComfyUI-Impact-Pack/impact_subpack
+ && git clone --depth=1 https://github.com/ltdrdata/ComfyUI-Impact-Subpack.git
 
 # --- Python deps for IP-Adapter FaceID + Impact Pack ---
 # insightface compiles native code → need build tools first.
@@ -66,7 +68,8 @@ RUN pip install --no-cache-dir "Cython>=0.29" "numpy<2" \
     insightface==0.7.3 \
     onnxruntime-gpu==1.18.1 \
     ultralytics \
- && pip install --no-cache-dir -r /comfyui/custom_nodes/ComfyUI-Impact-Pack/requirements.txt
+ && pip install --no-cache-dir -r /comfyui/custom_nodes/ComfyUI-Impact-Pack/requirements.txt \
+ && pip install --no-cache-dir -r /comfyui/custom_nodes/ComfyUI-Impact-Subpack/requirements.txt
 
 # --- Canon face references (5 imágenes de Sasha en /comfyui/input/) ---
 RUN mkdir -p /comfyui/input/face_refs \
