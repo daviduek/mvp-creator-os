@@ -46,6 +46,26 @@ export function buildFalInput(model: string, req: GenRequest): Record<string, un
     base.image_url = req.image_url || DEFAULT_FACE_REF;
     base.image_size = imageSize(req);
     base.num_images = 1;
+
+    // --- Realism tuning ---
+    // Append candid/imperfection cues unless the user already asked for a style.
+    const realismSuffix =
+      'candid amateur photograph, shot on iphone, natural skin texture with visible pores, ' +
+      'subtle skin imperfections, soft natural lighting, slight film grain, realistic depth of field, ' +
+      'unretouched, true-to-life colors';
+    base.prompt = `${base.prompt}, ${realismSuffix}`;
+
+    base.negative_prompt =
+      'airbrushed, smooth plastic skin, cgi, 3d render, cartoon, illustration, painting, ' +
+      'overprocessed, oversaturated, waxy skin, doll-like, artificial, AI look, beauty filter';
+
+    // Lower guidance = less "perfect"/plastic, more photographic.
+    base.guidance_scale = Number(process.env.FAL_PULID_GUIDANCE || 3.2);
+    base.num_inference_steps = Number(process.env.FAL_PULID_STEPS || 28);
+    base.true_cfg = Number(process.env.FAL_PULID_TRUE_CFG || 1);
+    // id_weight: identity strength. ~0.9 keeps Sasha but lets Flux render real skin.
+    base.id_weight = Number(process.env.FAL_PULID_ID_WEIGHT || 0.9);
+    if (req.seed != null) base.seed = req.seed;
     return base;
   }
 
