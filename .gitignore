@@ -16,7 +16,8 @@ scripts/
 .env.prod.check
 test_output_*.png
 final_e2e_test.png
-pony_test*.png
-lustify_test*.png
+*_test*.png
+ipa_test*.png
+cr_pony_test*.png
 
 .vercel
