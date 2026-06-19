@@ -56,7 +56,13 @@ RUN cd /comfyui/custom_nodes \
  && git clone --depth=1 https://github.com/ltdrdata/ComfyUI-Impact-Subpack.git ComfyUI-Impact-Pack/impact_subpack
 
 # --- Python deps for IP-Adapter FaceID + Impact Pack ---
-RUN pip install --no-cache-dir \
+# insightface compiles native code → need build tools first.
+# Pin Cython + numpy < 2 because newer numpy breaks insightface 0.7.3.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential g++ \
+ && rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir "Cython>=0.29" "numpy<2" \
+ && pip install --no-cache-dir \
     insightface==0.7.3 \
     onnxruntime-gpu==1.18.1 \
     ultralytics \
