@@ -30,7 +30,8 @@ export function useGeneration() {
           return;
         }
         if (data.status === 'failed') {
-          setState((s) => ({ ...s, loading: false, statusMsg: '', error: data.error || 'Falló la generación' }));
+          const msg = typeof data.error === 'string' ? data.error : (data.error ? JSON.stringify(data.error) : 'Falló la generación');
+          setState((s) => ({ ...s, loading: false, statusMsg: '', error: msg }));
           return;
         }
         const msg = data.status === 'processing'
@@ -60,7 +61,7 @@ export function useGeneration() {
         body: JSON.stringify({ mode, content, ...payload }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Error al generar');
+      if (!res.ok) throw new Error(typeof data.error === 'string' ? data.error : JSON.stringify(data.error) || 'Error al generar');
       if (data.url) {
         setState((s) => ({ ...s, loading: false, statusMsg: '', resultUrl: data.url }));
         return;

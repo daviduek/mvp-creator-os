@@ -17,6 +17,26 @@ function key(): string {
   return k;
 }
 
+/** fal errors come in several shapes: string, {error}, or Pydantic {detail:[{loc,msg}]}.
+ *  Always return a plain string so it never reaches React as an object. */
+function falErr(data: unknown, status?: number): string {
+  if (typeof data === 'string') return data;
+  const d = data as Record<string, unknown> | null;
+  if (d?.detail) {
+    if (typeof d.detail === 'string') return d.detail;
+    if (Array.isArray(d.detail)) {
+      return d.detail
+        .map((e: { loc?: unknown[]; msg?: string }) =>
+          `${(e.loc || []).join('.')}: ${e.msg || JSON.stringify(e)}`)
+        .join(' | ');
+    }
+    return JSON.stringify(d.detail);
+  }
+  if (typeof d?.error === 'string') return d.error;
+  if (d?.message && typeof d.message === 'string') return d.message;
+  return `fal error${status ? ' ' + status : ''}: ${JSON.stringify(data).slice(0, 300)}`;
+}
+
 export interface FalSubmitResult {
   requestId: string;
   statusUrl: string;    // authoritative URLs returned by fal — robust for sub-pathed models
@@ -32,7 +52,7 @@ export async function falSubmit(model: string, input: Record<string, unknown>): 
   });
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data?.detail || data?.error || `fal error ${res.status}`);
+    throw new Error(falErr(data, res.status));
   }
   if (!data.request_id) throw new Error('fal no devolvió request_id');
 
@@ -64,7 +84,7 @@ export async function falPoll(statusUrl: string, responseUrl: string): Promise<P
   const resultRes = await fetch(responseUrl, { headers: { Authorization: `Key ${key()}` } });
   const result = await resultRes.json();
   if (!resultRes.ok) {
-    return { status: 'failed', error: result?.detail || `fal result ${resultRes.status}` };
+    return { status: 'failed', error: falErr(result, resultRes.status) };
   }
 
   const url = extractFalUrl(result);
