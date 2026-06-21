@@ -21,7 +21,7 @@ export const ROUTE_INFO: Record<string, RouteInfo> = {
   // ---- Imagen ----
   't2i:sfw': {
     provider: 'fal', kind: 'image',
-    label: 'Imagen 4 Ultra', estCost: '~$0.06', estTime: '~10s', enabled: true,
+    label: 'Nano Banana (consistencia de personaje)', estCost: '~$0.04', estTime: '~12s', enabled: true,
   },
   't2i:nsfw': {
     provider: 'replicate', kind: 'image',

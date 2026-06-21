@@ -15,7 +15,7 @@ import { buildT2IGraph, buildPoseGraph, buildNsfwEditGraph } from '../workflows'
 
 /** Env overrides for model ids, keyed by `${mode}:${content}`. */
 const MODEL_ENV: Record<string, string | undefined> = {
-  't2i:sfw': process.env.FAL_MODEL_T2I_SFW || 'fal-ai/flux-pulid',
+  't2i:sfw': process.env.FAL_MODEL_T2I_SFW || 'fal-ai/nano-banana/edit',
   't2i:nsfw': process.env.REPLICATE_MODEL_T2I_NSFW, // unset → falls back to runpod infra
   't2v:sfw': process.env.FAL_MODEL_T2V_SFW || 'fal-ai/veo3',
   'i2v:sfw': process.env.FAL_MODEL_I2V_SFW || 'fal-ai/veo3/image-to-video',

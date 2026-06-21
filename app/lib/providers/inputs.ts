@@ -12,9 +12,12 @@
  */
 import type { GenRequest } from './types';
 
-const DEFAULT_FACE_REF =
-  process.env.SASHA_FACE_REF ||
-  'https://pub-59a7dc0002a9480faf4f6cb09c2bfd5e.r2.dev/face_refs/sasha_canon_01.png';
+const R2_FACE_BASE =
+  process.env.SASHA_FACE_BASE ||
+  'https://pub-59a7dc0002a9480faf4f6cb09c2bfd5e.r2.dev/face_refs';
+const DEFAULT_FACE_REF = process.env.SASHA_FACE_REF || `${R2_FACE_BASE}/sasha_canon_01.png`;
+// Multiple canon refs make Nano Banana's character consistency far more robust.
+const CANON_REFS = [1, 2, 3, 4, 5].map((i) => `${R2_FACE_BASE}/sasha_canon_0${i}.png`);
 
 /** Map our aspect ratios to the strings fal/replicate expect. */
 function aspect(req: GenRequest): string {
@@ -39,6 +42,19 @@ export function buildFalInput(model: string, req: GenRequest): Record<string, un
   const base: Record<string, unknown> = {
     prompt: req.prompt || '',
   };
+
+  // Nano Banana (Gemini 2.5 Flash Image) edit — character consistency from refs.
+  // Pass the canon Sasha photos as reference images; the prompt sets the new scene.
+  if (/nano-banana|gemini.*image/i.test(model)) {
+    return {
+      prompt:
+        `${req.prompt}. Keep the exact same woman from the reference photos — same face, ` +
+        `light green eyes, same features. Photorealistic, natural skin texture.`,
+      image_urls: CANON_REFS,
+      num_images: 1,
+      output_format: 'png',
+    };
+  }
 
   // Identity-preserving image models (PuLID / face-id).
   // IMPORTANT: pass the canon face ONLY as the identity reference. Do NOT pass it as
