@@ -8,14 +8,18 @@
 const SERVER_LIMIT = 4 * 1024 * 1024; // 4MB (under Vercel's 4.5MB body cap)
 
 export async function uploadAsset(file: File): Promise<string> {
-  // Images: downscale in the browser so they're always <4MB → always go through
-  // the server (/api/upload), avoiding the R2-CORS-required presigned PUT entirely.
-  let f = file;
+  // Small images/files go straight through the server (no canvas, no GPU touch).
+  if (file.size <= SERVER_LIMIT) return uploadViaServer(file);
+
+  // Oversized images: downscale in the browser to get under the server limit,
+  // avoiding the R2-CORS-required presigned PUT.
   if (file.type.startsWith('image/')) {
-    try { f = await downscaleImage(file); } catch { /* keep original on failure */ }
+    try {
+      const small = await downscaleImage(file);
+      if (small.size <= SERVER_LIMIT) return uploadViaServer(small);
+    } catch { /* fall through to presigned */ }
   }
-  if (f.size <= SERVER_LIMIT) return uploadViaServer(f);
-  return uploadViaPresigned(f); // only large videos hit this (needs R2 CORS)
+  return uploadViaPresigned(file); // large videos (needs R2 CORS)
 }
 
 /** Resize an image to maxDim on its longest side and re-encode as JPEG. */
