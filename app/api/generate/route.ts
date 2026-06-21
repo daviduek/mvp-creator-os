@@ -15,6 +15,7 @@ export async function POST(req: NextRequest) {
       duration: body.duration,
       resolution: body.resolution,
       image_url: body.image_url,
+      end_image_url: body.end_image_url,
       ref_video_url: body.ref_video_url,
       tiktok_url: body.tiktok_url,
       lora_weight: body.lora_weight,

@@ -13,17 +13,18 @@ export const TABS: { id: Tab; label: string; desc: string }[] = [
 export const MODE_NEEDS: Record<Tab, {
   prompt: boolean;
   image: boolean;        // upload a Sasha image
+  endImage: boolean;     // optional end frame (i2v chaining)
   refVideo: boolean;     // motion reference
   poseImage: boolean;    // pose reference
   aspect: boolean;
   duration: boolean;
   loraWeight: boolean;
 }> = {
-  t2i:    { prompt: true,  image: false, refVideo: false, poseImage: false, aspect: true,  duration: false, loraWeight: true },
-  i2v:    { prompt: true,  image: true,  refVideo: false, poseImage: false, aspect: true,  duration: true,  loraWeight: false },
-  t2v:    { prompt: true,  image: false, refVideo: false, poseImage: false, aspect: true,  duration: true,  loraWeight: false },
-  motion: { prompt: false, image: true,  refVideo: true,  poseImage: false, aspect: false, duration: false, loraWeight: false },
-  pose:   { prompt: true,  image: false, refVideo: false, poseImage: true,  aspect: true,  duration: false, loraWeight: true },
+  t2i:    { prompt: true,  image: false, endImage: false, refVideo: false, poseImage: false, aspect: true,  duration: false, loraWeight: true },
+  i2v:    { prompt: true,  image: true,  endImage: true,  refVideo: false, poseImage: false, aspect: true,  duration: true,  loraWeight: false },
+  t2v:    { prompt: true,  image: false, endImage: false, refVideo: false, poseImage: false, aspect: true,  duration: true,  loraWeight: false },
+  motion: { prompt: false, image: true,  endImage: false, refVideo: true,  poseImage: false, aspect: false, duration: false, loraWeight: false },
+  pose:   { prompt: true,  image: false, endImage: false, refVideo: false, poseImage: true,  aspect: true,  duration: false, loraWeight: true },
 };
 
 export const ASPECT_RATIOS = ['1:1', '16:9', '9:16', '4:3', '3:4'];

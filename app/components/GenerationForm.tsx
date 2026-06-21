@@ -19,6 +19,7 @@ export default function GenerationForm({ mode }: { mode: Tab }) {
   const [duration, setDuration] = useState(6);
   const [loraWeight, setLoraWeight] = useState(0.85);
   const [image, setImage] = useState<FileState | null>(null);
+  const [endImage, setEndImage] = useState<FileState | null>(null);
   const [poseImage, setPoseImage] = useState<FileState | null>(null);
   const [refVideo, setRefVideo] = useState<FileState | null>(null);
   const [sourceMode, setSourceMode] = useState<'upload' | 'link'>('upload');
@@ -51,6 +52,11 @@ export default function GenerationForm({ mode }: { mode: Tab }) {
         const url = image.url || await uploadAsset(image.file);
         setImage({ ...image, url });
         payload.image_url = url;
+      }
+      if (needs.endImage && endImage) {
+        const url = endImage.url || await uploadAsset(endImage.file);
+        setEndImage({ ...endImage, url });
+        payload.end_image_url = url;
       }
       if (needs.poseImage && poseImage) {
         const url = poseImage.url || await uploadAsset(poseImage.file);
@@ -130,8 +136,15 @@ export default function GenerationForm({ mode }: { mode: Tab }) {
 
         {needs.image && (
           <div className="field">
-            <label>Imagen de Sasha</label>
-            <FileUpload value={image} onChange={setImage} hint="Subí una imagen de Sasha para animar" />
+            <label>{needs.endImage ? 'Imagen inicial (frame de inicio)' : 'Imagen de Sasha'}</label>
+            <FileUpload value={image} onChange={setImage} hint="Subí la imagen de Sasha (frame inicial)" />
+          </div>
+        )}
+
+        {needs.endImage && (
+          <div className="field">
+            <label>Imagen final (opcional · frame de término)</label>
+            <FileUpload value={endImage} onChange={setEndImage} hint="Opcional: foto donde termina el video (para encadenar secuencias)" />
           </div>
         )}
 

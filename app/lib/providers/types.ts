@@ -15,7 +15,8 @@ export interface GenRequest {
   aspect_ratio?: string;     // '1:1' | '16:9' | '9:16' | '4:3' | '3:4'
   duration?: number;         // seconds, for video
   resolution?: string;       // '480p' | '720p' | '1080p'
-  image_url?: string;        // for i2v / motion / pose (the Sasha image)
+  image_url?: string;        // for i2v / motion / pose (the Sasha image / start frame)
+  end_image_url?: string;    // optional end frame for i2v (chaining sequences)
   ref_video_url?: string;    // for motion (the reference dance/movement)
   tiktok_url?: string;       // for motion (download via yt-dlp on worker)
   lora_weight?: number;      // only relevant for self-hosted runpod

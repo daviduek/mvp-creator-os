@@ -49,11 +49,15 @@ export function buildFalInput(model: string, req: GenRequest): Record<string, un
     base.image_size = imageSize(req);
     base.num_images = 1;
 
-    // Lighter realism cues (heavy suffixes were also flattening pose/expression).
-    const realismSuffix = 'natural skin texture, visible pores, soft natural lighting, film grain, candid';
+    // Realism cues + locked eye color (light green / hazel, natural — not the
+    // saturated "AI" look). Always applied so Sasha's eyes stay consistent.
+    const realismSuffix =
+      'light green eyes, natural hazel-green iris with realistic detail, ' +
+      'natural skin texture, visible pores, soft natural lighting, film grain, candid';
     base.prompt = `${base.prompt}, ${realismSuffix}`;
 
     base.negative_prompt =
+      'blue eyes, dark brown eyes, heterochromia, glowing eyes, oversaturated eyes, ' +
       'airbrushed, smooth plastic skin, cgi, 3d render, cartoon, illustration, painting, ' +
       'overprocessed, waxy skin, doll-like, AI look, beauty filter';
 
@@ -72,7 +76,12 @@ export function buildFalInput(model: string, req: GenRequest): Record<string, un
   if (/veo|kling|runway|luma|minimax|video/i.test(model)) {
     base.aspect_ratio = aspect(req) === '9:16' ? '9:16' : '16:9';
     if (req.duration) base.duration = `${req.duration}s`;
-    if (req.image_url) base.image_url = req.image_url;     // i2v / animate
+    if (req.image_url) base.image_url = req.image_url;     // i2v / animate (start frame)
+    if (req.end_image_url) {
+      // end-frame param name varies by model; send the common ones, model ignores extras
+      base.tail_image_url = req.end_image_url;
+      base.end_image_url = req.end_image_url;
+    }
     if (req.ref_video_url) base.video_url = req.ref_video_url; // motion ref
     return base;
   }
