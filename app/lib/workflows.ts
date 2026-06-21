@@ -138,56 +138,47 @@ export function buildNsfwEditGraph(opts: {
   denoise?: number;
   seed?: number;
 }) {
-  // Premium NSFW pipeline: Lustify SDXL (photoreal body) img2img → ReActor face-swap
-  // (exact Sasha face from canon) → SaveImage. The upscaler runs afterwards in /api/poll.
+  // KNOWN-GOOD NSFW pipeline: CR Pony + LoRA + IP-Adapter FaceID img2img.
+  // (Lustify+ReActor variant made workers unhealthy; reverted to this tested path.)
+  const prompt = ensureTrigger(opts.prompt);
   const seed = opts.seed ?? randomSeed();
   const denoise = opts.denoise ?? 0.65;
-  const prompt = `${opts.prompt}, photorealistic, raw photo, natural skin texture, dslr, sharp focus`;
-  const negative =
-    'lowres, blurry, deformed, bad anatomy, extra limbs, extra fingers, watermark, text, ' +
-    'cartoon, illustration, 3d render, plastic skin';
 
   return {
-    '1': { class_type: 'CheckpointLoaderSimple', inputs: { ckpt_name: 'lustifySDXL.safetensors' } },
-
-    // Source (the chosen SFW Sasha image) → latent for img2img
+    '1': { class_type: 'CheckpointLoaderSimple', inputs: { ckpt_name: SDXL_BASE } },
+    '10': {
+      class_type: 'LoraLoader',
+      inputs: {
+        lora_name: LORA_NAME, strength_model: opts.lora_weight, strength_clip: opts.lora_weight,
+        model: ['1', 0], clip: ['1', 1],
+      },
+    },
+    '30': { class_type: 'IPAdapterModelLoader', inputs: { ipadapter_file: 'ip-adapter-faceid-plusv2_sdxl.bin' } },
+    '31': { class_type: 'CLIPVisionLoader', inputs: { clip_name: 'CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors' } },
+    '32': { class_type: 'IPAdapterInsightFaceLoader', inputs: { provider: 'CUDA', model_name: 'antelopev2' } },
+    '33': { class_type: 'LoadImage', inputs: { image: 'face_refs/sasha_canon_01.png' } },
+    '36': {
+      class_type: 'IPAdapterFaceID',
+      inputs: {
+        model: ['10', 0], ipadapter: ['30', 0], image: ['33', 0], clip_vision: ['31', 0],
+        weight: 0.85, weight_faceidv2: 1.5, weight_type: 'linear', combine_embeds: 'concat',
+        start_at: 0, end_at: 1, embeds_scaling: 'V only', insightface: ['32', 0],
+      },
+    },
     '20': { class_type: 'LoadImage', inputs: { image: opts.source_image_filename } },
     '21': { class_type: 'VAEEncode', inputs: { pixels: ['20', 0], vae: ['1', 2] } },
-
-    '6': { class_type: 'CLIPTextEncode', inputs: { text: prompt, clip: ['1', 1] } },
-    '7': { class_type: 'CLIPTextEncode', inputs: { text: negative, clip: ['1', 1] } },
-
+    '6': { class_type: 'CLIPTextEncode', inputs: { text: prompt, clip: ['10', 1] } },
+    '7': { class_type: 'CLIPTextEncode', inputs: { text: SDXL_NEGATIVE, clip: ['10', 1] } },
     '3': {
       class_type: 'KSampler',
       inputs: {
-        seed, steps: 30, cfg: 6,
+        seed, steps: 30, cfg: 6.5,
         sampler_name: 'dpmpp_2m_sde', scheduler: 'karras', denoise,
-        model: ['1', 0], positive: ['6', 0], negative: ['7', 0], latent_image: ['21', 0],
+        model: ['36', 0], positive: ['6', 0], negative: ['7', 0], latent_image: ['21', 0],
       },
     },
     '8': { class_type: 'VAEDecode', inputs: { samples: ['3', 0], vae: ['1', 2] } },
-
-    // Canon Sasha face → swap onto the generated body for exact identity
-    '40': { class_type: 'LoadImage', inputs: { image: 'face_refs/sasha_canon_01.png' } },
-    '41': {
-      class_type: 'ReActorFaceSwap',
-      inputs: {
-        enabled: true,
-        input_image: ['8', 0],
-        source_image: ['40', 0],
-        swap_model: 'inswapper_128.onnx',
-        facedetection: 'retinaface_resnet50',
-        face_restore_model: 'none',
-        face_restore_visibility: 1,
-        codeformer_weight: 0.5,
-        detect_gender_input: 'no',
-        detect_gender_source: 'no',
-        input_faces_index: '0',
-        source_faces_index: '0',
-        console_log_level: 1,
-      },
-    },
-    '9': { class_type: 'SaveImage', inputs: { filename_prefix: 'sasha_nsfw_premium', images: ['41', 0] } },
+    '9': { class_type: 'SaveImage', inputs: { filename_prefix: 'sasha_nsfw_edit', images: ['8', 0] } },
   };
 }
 
