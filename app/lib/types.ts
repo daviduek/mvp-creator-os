@@ -27,4 +27,4 @@ export const MODE_NEEDS: Record<Tab, {
 };
 
 export const ASPECT_RATIOS = ['1:1', '16:9', '9:16', '4:3', '3:4'];
-export const VIDEO_DURATIONS = [4, 5, 8];
+export const VIDEO_DURATIONS = [4, 6, 8]; // Veo 3 only accepts 4s / 6s / 8s

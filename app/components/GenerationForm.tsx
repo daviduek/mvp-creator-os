@@ -16,7 +16,7 @@ export default function GenerationForm({ mode }: { mode: Tab }) {
   const [content, setContent] = useState<ContentMode>('sfw');
   const [prompt, setPrompt] = useState('');
   const [aspect, setAspect] = useState(mode === 'motion' ? '9:16' : '1:1');
-  const [duration, setDuration] = useState(5);
+  const [duration, setDuration] = useState(6);
   const [loraWeight, setLoraWeight] = useState(0.85);
   const [image, setImage] = useState<FileState | null>(null);
   const [poseImage, setPoseImage] = useState<FileState | null>(null);
