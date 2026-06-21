@@ -1,7 +1,8 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import type { Tab, ContentMode } from './types';
+import type { ContentMode } from './types';
+import type { GenMode } from './providers/types';
 
 interface GenResult {
   loading: boolean;
@@ -45,7 +46,7 @@ export function useGeneration() {
   };
 
   const generate = async (
-    mode: Tab,
+    mode: GenMode,
     content: ContentMode,
     kind: 'image' | 'video',
     payload: Record<string, unknown>,

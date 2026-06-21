@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
       ref_video_url: body.ref_video_url,
       tiktok_url: body.tiktok_url,
       lora_weight: body.lora_weight,
+      denoise: body.denoise,
       seed: body.seed,
     };
 

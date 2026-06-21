@@ -74,6 +74,21 @@ export default function GenerationForm({ mode }: { mode: Tab }) {
     gen.generate(mode, content, kind, payload);
   };
 
+  // --- NSFW conversion of a generated image ---
+  const [showConvert, setShowConvert] = useState(false);
+  const [nsfwPrompt, setNsfwPrompt] = useState('nude, explicit, photorealistic');
+  const [strength, setStrength] = useState(0.65);
+
+  const convertToNsfw = () => {
+    if (!gen.resultUrl) return;
+    gen.generate('edit', 'nsfw', 'image', {
+      image_url: gen.resultUrl,
+      prompt: nsfwPrompt,
+      denoise: strength,
+      lora_weight: 0.85,
+    });
+  };
+
   const disabled = gen.loading || (route ? !route.enabled : true);
 
   return (
@@ -185,6 +200,32 @@ export default function GenerationForm({ mode }: { mode: Tab }) {
             <a href={gen.resultUrl} target="_blank" rel="noopener noreferrer" className="download-btn">
               {gen.resultKind === 'video' ? 'Descargar video ↗' : 'Ver tamaño completo ↗'}
             </a>
+
+            {/* Convert this image to explicit (img2img on infra propia) */}
+            {gen.resultKind === 'image' && !gen.loading && (
+              <div style={{ marginTop: 16, textAlign: 'left' }}>
+                {!showConvert ? (
+                  <button className="ct nsfw on" style={{ width: '100%' }} onClick={() => setShowConvert(true)}>
+                    🔞 Convertir esta imagen a explícito
+                  </button>
+                ) : (
+                  <div style={{ border: '1px solid #7f1d1d', borderRadius: 8, padding: 14, background: '#1a0d0d' }}>
+                    <div className="field">
+                      <label>Prompt explícito</label>
+                      <textarea value={nsfwPrompt} onChange={(e) => setNsfwPrompt(e.target.value)} style={{ minHeight: 60 }} />
+                    </div>
+                    <div className="field">
+                      <label>Intensidad del cambio ({strength.toFixed(2)})</label>
+                      <input type="range" min="0.4" max="0.85" step="0.05" value={strength} onChange={(e) => setStrength(Number(e.target.value))} />
+                      <p className="hint">+ bajo = mantiene más la imagen original · + alto = cambia más</p>
+                    </div>
+                    <button className="primary" onClick={convertToNsfw} disabled={gen.loading}>
+                      {gen.loading ? 'Convirtiendo...' : 'Generar versión explícita →'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ) : !gen.loading && !gen.error ? (
           <div className="result-area"><span>El resultado aparecerá aquí</span></div>

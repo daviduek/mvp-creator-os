@@ -4,7 +4,7 @@
  */
 
 export type ContentMode = 'sfw' | 'nsfw';
-export type GenMode = 't2i' | 'i2v' | 't2v' | 'motion' | 'pose';
+export type GenMode = 't2i' | 'i2v' | 't2v' | 'motion' | 'pose' | 'edit';
 export type ProviderName = 'fal' | 'replicate' | 'runpod';
 
 /** A normalized generation request coming from the UI. */
@@ -19,6 +19,7 @@ export interface GenRequest {
   ref_video_url?: string;    // for motion (the reference dance/movement)
   tiktok_url?: string;       // for motion (download via yt-dlp on worker)
   lora_weight?: number;      // only relevant for self-hosted runpod
+  denoise?: number;          // img2img strength for 'edit' mode (0.4 keep / 0.8 change a lot)
   seed?: number;
 }
 

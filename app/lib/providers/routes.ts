@@ -61,6 +61,16 @@ export const ROUTE_INFO: Record<string, RouteInfo> = {
     note: 'Requiere build del worker de motion NSFW',
   },
 
+  // ---- NSFW edit (img2img sobre imagen ya generada de Sasha) ----
+  'edit:nsfw': {
+    provider: 'runpod', kind: 'image',
+    label: 'CR Pony img2img + IP-Adapter (infra propia)', estCost: '~$0.03', estTime: '~40s', enabled: true,
+  },
+  'edit:sfw': {
+    provider: 'runpod', kind: 'image',
+    label: 'CR Pony img2img + IP-Adapter (infra propia)', estCost: '~$0.03', estTime: '~40s', enabled: true,
+  },
+
   // ---- Pose copy ----
   'pose:sfw': {
     provider: 'fal', kind: 'image',

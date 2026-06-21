@@ -11,7 +11,7 @@ import { falSubmit, falPoll } from './fal';
 import { replicateSubmit, replicatePoll } from './replicate';
 import { runpodSubmit, runpodPoll, ComfyImageInput } from './runpod';
 import { buildFalInput, buildReplicateInput } from './inputs';
-import { buildT2IGraph, buildPoseGraph } from '../workflows';
+import { buildT2IGraph, buildPoseGraph, buildNsfwEditGraph } from '../workflows';
 
 /** Env overrides for model ids, keyed by `${mode}:${content}`. */
 const MODEL_ENV: Record<string, string | undefined> = {
@@ -104,6 +104,24 @@ export async function submit(req: GenRequest): Promise<SubmitResult> {
       pose_image_filename: filename,
       prompt: req.prompt || '',
       lora_weight: req.lora_weight ?? 0.85,
+    });
+    const id = await runpodSubmit(graph, images);
+    return { jobId: encodeToken({ p: 'runpod', id }) };
+  }
+
+  if (req.mode === 'edit') {
+    if (!req.image_url) throw new Error('Falta la imagen de origen');
+    const filename = 'source.png';
+    const r = await fetch(req.image_url);
+    if (!r.ok) throw new Error(`No se pudo bajar la imagen de origen (${r.status})`);
+    const buf = Buffer.from(await r.arrayBuffer());
+    const images: ComfyImageInput[] = [{ name: filename, image: buf.toString('base64') }];
+    const graph = buildNsfwEditGraph({
+      source_image_filename: filename,
+      prompt: req.prompt || 'nude, explicit',
+      lora_weight: req.lora_weight ?? 0.85,
+      denoise: req.denoise ?? 0.65,
+      seed: req.seed,
     });
     const id = await runpodSubmit(graph, images);
     return { jobId: encodeToken({ p: 'runpod', id }) };

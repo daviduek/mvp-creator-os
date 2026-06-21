@@ -128,6 +128,65 @@ export function buildT2IGraph(opts: {
   };
 }
 
+/** NSFW edit (img2img) of an already-generated Sasha image.
+ *  Keeps her face (source image + IP-Adapter FaceID) and composition while
+ *  transforming the rest per the prompt. denoise controls how much changes. */
+export function buildNsfwEditGraph(opts: {
+  source_image_filename: string; // filename written into ComfyUI input/ from base64
+  prompt: string;
+  lora_weight: number;
+  denoise?: number;
+  seed?: number;
+}) {
+  const prompt = ensureTrigger(opts.prompt);
+  const seed = opts.seed ?? randomSeed();
+  const denoise = opts.denoise ?? 0.65;
+
+  return {
+    '1': { class_type: 'CheckpointLoaderSimple', inputs: { ckpt_name: SDXL_BASE } },
+    '10': {
+      class_type: 'LoraLoader',
+      inputs: {
+        lora_name: LORA_NAME,
+        strength_model: opts.lora_weight,
+        strength_clip: opts.lora_weight,
+        model: ['1', 0],
+        clip: ['1', 1],
+      },
+    },
+    // IP-Adapter FaceID — re-anchor Sasha's face from the canon ref
+    '30': { class_type: 'IPAdapterModelLoader', inputs: { ipadapter_file: 'ip-adapter-faceid-plusv2_sdxl.bin' } },
+    '31': { class_type: 'CLIPVisionLoader', inputs: { clip_name: 'CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors' } },
+    '32': { class_type: 'IPAdapterInsightFaceLoader', inputs: { provider: 'CUDA', model_name: 'antelopev2' } },
+    '33': { class_type: 'LoadImage', inputs: { image: 'face_refs/sasha_canon_01.png' } },
+    '36': {
+      class_type: 'IPAdapterFaceID',
+      inputs: {
+        model: ['10', 0], ipadapter: ['30', 0], image: ['33', 0], clip_vision: ['31', 0],
+        weight: 0.85, weight_faceidv2: 1.5, weight_type: 'linear', combine_embeds: 'concat',
+        start_at: 0, end_at: 1, embeds_scaling: 'V only', insightface: ['32', 0],
+      },
+    },
+    // Source image → latent (img2img)
+    '20': { class_type: 'LoadImage', inputs: { image: opts.source_image_filename } },
+    '21': { class_type: 'VAEEncode', inputs: { pixels: ['20', 0], vae: ['1', 2] } },
+
+    '6': { class_type: 'CLIPTextEncode', inputs: { text: prompt, clip: ['10', 1] } },
+    '7': { class_type: 'CLIPTextEncode', inputs: { text: SDXL_NEGATIVE, clip: ['10', 1] } },
+
+    '3': {
+      class_type: 'KSampler',
+      inputs: {
+        seed, steps: 30, cfg: 6.5,
+        sampler_name: 'dpmpp_2m_sde', scheduler: 'karras', denoise,
+        model: ['36', 0], positive: ['6', 0], negative: ['7', 0], latent_image: ['21', 0],
+      },
+    },
+    '8': { class_type: 'VAEDecode', inputs: { samples: ['3', 0], vae: ['1', 2] } },
+    '9': { class_type: 'SaveImage', inputs: { filename_prefix: 'sasha_nsfw_edit', images: ['8', 0] } },
+  };
+}
+
 /** Pose-copy via ControlNet OpenPose */
 export function buildPoseGraph(opts: {
   pose_image_filename: string; // filename inside ComfyUI input/ folder
