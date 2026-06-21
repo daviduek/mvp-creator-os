@@ -64,7 +64,7 @@ RUN cd /comfyui/custom_nodes \
  && git clone --depth=1 https://github.com/cubiq/ComfyUI_IPAdapter_plus.git \
  && git clone --depth=1 https://github.com/ltdrdata/ComfyUI-Impact-Pack.git \
  && git clone --depth=1 https://github.com/ltdrdata/ComfyUI-Impact-Subpack.git \
- && git clone --depth=1 https://github.com/Gourieff/comfyui-reactor-node.git
+ && git clone --depth=1 https://github.com/Gourieff/ComfyUI-ReActor.git
 
 # --- ReActor face-swap model (inswapper) + buffalo_l for exact Sasha identity ---
 RUN mkdir -p /comfyui/models/insightface \
@@ -89,7 +89,7 @@ RUN pip install --no-cache-dir "Cython>=0.29" "numpy<2" \
     ultralytics \
  && pip install --no-cache-dir -r /comfyui/custom_nodes/ComfyUI-Impact-Pack/requirements.txt \
  && pip install --no-cache-dir -r /comfyui/custom_nodes/ComfyUI-Impact-Subpack/requirements.txt \
- && pip install --no-cache-dir -r /comfyui/custom_nodes/comfyui-reactor-node/requirements.txt || true
+ && (pip install --no-cache-dir -r /comfyui/custom_nodes/ComfyUI-ReActor/requirements.txt || true)
 
 # --- Canon face references (5 imágenes de Sasha en /comfyui/input/) ---
 RUN mkdir -p /comfyui/input/face_refs \
