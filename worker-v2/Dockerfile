@@ -64,17 +64,16 @@ RUN cd /comfyui/custom_nodes \
  && git clone --depth=1 https://github.com/cubiq/ComfyUI_IPAdapter_plus.git \
  && git clone --depth=1 https://github.com/ltdrdata/ComfyUI-Impact-Pack.git \
  && git clone --depth=1 https://github.com/ltdrdata/ComfyUI-Impact-Subpack.git \
- && git clone --depth=1 https://github.com/Gourieff/ComfyUI-ReActor.git
+ && git clone --depth=1 https://github.com/storyicon/comfyui_segment_anything.git
 
-# --- ReActor face-swap model (inswapper) + buffalo_l for exact Sasha identity ---
-RUN mkdir -p /comfyui/models/insightface \
- && wget -q -O /comfyui/models/insightface/inswapper_128.onnx \
-    "https://huggingface.co/datasets/Gourieff/ReActor/resolve/main/models/inswapper_128.onnx" \
- && test $(stat -c %s /comfyui/models/insightface/inswapper_128.onnx) -gt 200000000
-RUN mkdir -p /root/.insightface/models && cd /root/.insightface/models \
- && wget -q -O buffalo_l.zip "https://github.com/deepinsight/insightface/releases/download/v0.7/buffalo_l.zip" \
- && python -c "import zipfile; zipfile.ZipFile('buffalo_l.zip').extractall('buffalo_l')" \
- && rm buffalo_l.zip
+# --- Segmentation models for clothing-mask inpainting (GroundingDINO + SAM) ---
+RUN mkdir -p /comfyui/models/grounding-dino /comfyui/models/sams \
+ && wget -q -O /comfyui/models/grounding-dino/groundingdino_swint_ogc.pth \
+    "https://huggingface.co/ShilongLiu/GroundingDINO/resolve/main/groundingdino_swint_ogc.pth" \
+ && wget -q -O /comfyui/models/grounding-dino/GroundingDINO_SwinT_OGC.cfg.py \
+    "https://huggingface.co/ShilongLiu/GroundingDINO/resolve/main/GroundingDINO_SwinT_OGC.cfg.py" \
+ && wget -q -O /comfyui/models/sams/sam_vit_b_01ec64.pth \
+    "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth"
 
 # --- Python deps for IP-Adapter FaceID + Impact Pack ---
 # insightface compiles native code → need build tools first.
@@ -89,7 +88,7 @@ RUN pip install --no-cache-dir "Cython>=0.29" "numpy<2" \
     ultralytics \
  && pip install --no-cache-dir -r /comfyui/custom_nodes/ComfyUI-Impact-Pack/requirements.txt \
  && pip install --no-cache-dir -r /comfyui/custom_nodes/ComfyUI-Impact-Subpack/requirements.txt \
- && (pip install --no-cache-dir -r /comfyui/custom_nodes/ComfyUI-ReActor/requirements.txt || true)
+ && (pip install --no-cache-dir -r /comfyui/custom_nodes/comfyui_segment_anything/requirements.txt || true)
 
 # --- Canon face references (5 imágenes de Sasha en /comfyui/input/) ---
 RUN mkdir -p /comfyui/input/face_refs \
