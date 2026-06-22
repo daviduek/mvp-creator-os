@@ -43,14 +43,15 @@ export function buildFalInput(model: string, req: GenRequest): Record<string, un
     prompt: req.prompt || '',
   };
 
-  // Nano Banana (Gemini 2.5 Flash Image) edit — character consistency from refs.
-  // Pass the canon Sasha photos as reference images; the prompt sets the new scene.
+  // Nano Banana (Gemini 2.5 Flash Image) edit — character consistency from ONE
+  // canonical reference (averaging multiple refs caused identity drift).
   if (/nano-banana|gemini.*image/i.test(model)) {
     return {
       prompt:
-        `${req.prompt}. Keep the exact same woman from the reference photos — same face, ` +
-        `light green eyes, same features. Photorealistic, natural skin texture.`,
-      image_urls: CANON_REFS,
+        `${req.prompt}. This is the exact same woman as in the reference image — ` +
+        `keep her identical face, light green eyes, eyebrows, nose, lips and bone structure. ` +
+        `Photorealistic, natural skin texture.`,
+      image_urls: [DEFAULT_FACE_REF],
       num_images: 1,
       output_format: 'png',
     };
