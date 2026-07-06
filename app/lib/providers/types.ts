@@ -4,7 +4,7 @@
  */
 
 export type ContentMode = 'sfw' | 'nsfw';
-export type GenMode = 't2i' | 'i2v' | 't2v' | 'motion' | 'pose' | 'edit';
+export type GenMode = 't2i' | 'i2v' | 't2v' | 'motion' | 'pose' | 'edit' | 'talk';
 export type ProviderName = 'fal' | 'replicate' | 'runpod';
 
 /** A normalized generation request coming from the UI. */
@@ -22,6 +22,10 @@ export interface GenRequest {
   lora_weight?: number;      // only relevant for self-hosted runpod
   denoise?: number;          // img2img strength for 'edit' mode (0.4 keep / 0.8 change a lot)
   seed?: number;
+  // ---- talk mode (Sasha hablando: TTS + talking-head) ----
+  script?: string;           // what Sasha says; ElevenLabs turns it into audio
+  voice_id?: string;         // ElevenLabs voice id (defaults to Sasha's configured voice)
+  audio_url?: string;        // filled server-side after TTS; drives the OmniHuman avatar
 }
 
 /** What submit() returns: either an immediate URL or an opaque job token to poll. */

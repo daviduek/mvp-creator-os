@@ -15,6 +15,7 @@ export default function GenerationForm({ mode }: { mode: Tab }) {
 
   const [content, setContent] = useState<ContentMode>('sfw');
   const [prompt, setPrompt] = useState('');
+  const [script, setScript] = useState('');
   const [aspect, setAspect] = useState(mode === 'motion' ? '9:16' : '1:1');
   const [duration, setDuration] = useState(6);
   const [loraWeight, setLoraWeight] = useState(0.85);
@@ -35,6 +36,7 @@ export default function GenerationForm({ mode }: { mode: Tab }) {
   const submit = async () => {
     setLocalError('');
     if (needs.prompt && !prompt.trim()) { setLocalError('Escribí un prompt.'); return; }
+    if (needs.script && !script.trim()) { setLocalError('Escribí el guión que dice Sasha.'); return; }
     if (needs.image && !image) { setLocalError('Subí una imagen de Sasha.'); return; }
     if (needs.poseImage && !poseImage) { setLocalError('Subí la foto de la pose.'); return; }
     if (needs.refVideo && sourceMode === 'upload' && !refVideo) { setLocalError('Subí el video de referencia.'); return; }
@@ -42,6 +44,7 @@ export default function GenerationForm({ mode }: { mode: Tab }) {
 
     const kind = route?.kind || 'image';
     const payload: Record<string, unknown> = { prompt };
+    if (needs.script) payload.script = script;
     if (needs.aspect) payload.aspect_ratio = aspect;
     if (needs.duration) payload.duration = duration;
     if (needs.loraWeight) payload.lora_weight = loraWeight;
@@ -131,6 +134,18 @@ export default function GenerationForm({ mode }: { mode: Tab }) {
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
             />
+          </div>
+        )}
+
+        {needs.script && (
+          <div className="field">
+            <label>Guión (lo que dice Sasha)</label>
+            <textarea
+              placeholder="Hey loves! I just landed in Positano and the view is unreal — come with me..."
+              value={script}
+              onChange={(e) => setScript(e.target.value)}
+            />
+            <p className="hint">Voz: Sarah (US). La cara de Sasha se usa automáticamente. ~$0.14/seg de audio.</p>
           </div>
         )}
 

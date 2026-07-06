@@ -12,6 +12,8 @@ import { replicateSubmit, replicatePoll } from './replicate';
 import { runpodSubmit, runpodPoll, ComfyImageInput } from './runpod';
 import { buildFalInput, buildReplicateInput } from './inputs';
 import { buildT2IGraph, buildPoseGraph, buildNsfwEditGraph } from '../workflows';
+import { tts } from './elevenlabs';
+import { uploadToR2, generateKey } from '../r2';
 
 /** Env overrides for model ids, keyed by `${mode}:${content}`. */
 const MODEL_ENV: Record<string, string | undefined> = {
@@ -20,6 +22,7 @@ const MODEL_ENV: Record<string, string | undefined> = {
   't2v:sfw': process.env.FAL_MODEL_T2V_SFW || 'fal-ai/veo3',
   'i2v:sfw': process.env.FAL_MODEL_I2V_SFW || 'fal-ai/veo3/image-to-video',
   'motion:sfw': process.env.FAL_MODEL_MOTION_SFW || 'fal-ai/runway-gen4/turbo/image-to-video',
+  'talk:sfw': process.env.FAL_MODEL_TALK_SFW || 'fal-ai/bytedance/omnihuman',
 };
 
 interface Resolved {
@@ -66,6 +69,16 @@ function decodeToken(token: string): TokenData {
 /** Submit a generation request. Returns a jobId to poll. */
 export async function submit(req: GenRequest): Promise<SubmitResult> {
   const { provider, model } = resolve(req);
+
+  // `talk` mode needs a TTS step first: script → Sasha's voice (ElevenLabs) →
+  // R2 → audio_url that drives the OmniHuman talking-head. Then it's a normal
+  // fal submit with the omnihuman model.
+  if (req.mode === 'talk') {
+    if (!req.script?.trim()) throw new Error('Guión requerido');
+    const audioBuf = await tts(req.script, req.voice_id);
+    const audioKey = generateKey('uploads/audio', 'mp3');
+    req.audio_url = await uploadToR2(audioKey, audioBuf, 'audio/mpeg');
+  }
 
   if (provider === 'fal') {
     if (!model) throw new Error('Modelo fal no configurado');

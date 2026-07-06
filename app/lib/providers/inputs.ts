@@ -57,6 +57,15 @@ export function buildFalInput(model: string, req: GenRequest): Record<string, un
     };
   }
 
+  // Talking-head avatar (OmniHuman): a single Sasha portrait + audio → talking
+  // video with lip-sync + expression. Audio is produced by ElevenLabs upstream.
+  if (/omnihuman|talking|avatar|infinitetalk|sadtalker|hedra/i.test(model)) {
+    return {
+      image_url: req.image_url || DEFAULT_FACE_REF,
+      audio_url: req.audio_url,
+    };
+  }
+
   // Identity-preserving image models (PuLID / face-id).
   // IMPORTANT: pass the canon face ONLY as the identity reference. Do NOT pass it as
   // image_url — that makes flux-pulid treat it as an init/img2img base and reproduce

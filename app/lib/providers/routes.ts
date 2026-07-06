@@ -39,6 +39,17 @@ export const ROUTE_INFO: Record<string, RouteInfo> = {
     note: 'Requiere build del worker de video NSFW',
   },
 
+  // ---- Sasha hablando (guión → voz → talking-head) ----
+  'talk:sfw': {
+    provider: 'fal', kind: 'video',
+    label: 'OmniHuman + ElevenLabs (Sasha hablando)', estCost: '~$0.14/s (~$2)', estTime: '~1-3min', enabled: true,
+  },
+  'talk:nsfw': {
+    provider: 'runpod', kind: 'video',
+    label: 'Talking-head NSFW (infra propia)', estCost: '~$0.05/s', estTime: '~4-8min', enabled: false,
+    note: 'Requiere build del worker de talking-head NSFW',
+  },
+
   // ---- Imagen → Video (animar) ----
   'i2v:sfw': {
     provider: 'fal', kind: 'video',

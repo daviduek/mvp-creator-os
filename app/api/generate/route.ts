@@ -21,10 +21,15 @@ export async function POST(req: NextRequest) {
       lora_weight: body.lora_weight,
       denoise: body.denoise,
       seed: body.seed,
+      script: body.script,
+      voice_id: body.voice_id,
     };
 
     if (genReq.mode === 't2i' && !genReq.prompt?.trim()) {
       return NextResponse.json({ error: 'Prompt requerido' }, { status: 400 });
+    }
+    if (genReq.mode === 'talk' && !genReq.script?.trim()) {
+      return NextResponse.json({ error: 'Guión requerido' }, { status: 400 });
     }
 
     const result = await submit(genReq);
